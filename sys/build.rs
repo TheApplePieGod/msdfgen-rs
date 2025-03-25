@@ -75,7 +75,13 @@ fn generate_bindings<P: AsRef<Path>>(
     let bindings = bindgen::Builder::default()
         .detect_include_paths(true)
         .clang_arg("-xc++")
-        .clang_arg("-std=c++11")
+        .clang_arg(if cfg!(target_os = "windows") {
+            // Use C++14 on Windows due to errors in the STL:
+            // xstddef:288:22: error: 'auto' return without trailing return type; deduced return types are a C++14 extension
+            "-std=c++14"
+        } else {
+            "-std=c++11"
+        })
         .clang_args(stdlib.map_or_else(Vec::new, |stdlib| vec![format!("--stdlib={}", stdlib)]))
         .clang_arg("-target")
         .clang_arg(ctarget)
@@ -182,9 +188,6 @@ fn build_library(src_dir: &Path, lib_dir: &Path) {
             None,
         )
         .define("MSDFGEN_USE_CPP11", None)
-        .flag("-std=c++11")
-        .flag("-ffunction-sections")
-        .flag("-fdata-sections")
         .warnings(false)
         .extra_warnings(false)
         .include(&src_dir)
@@ -192,6 +195,12 @@ fn build_library(src_dir: &Path, lib_dir: &Path) {
         .files(core_srcs)
         .files(extra_srcs)
         .out_dir(lib_dir);
+
+    #[cfg(not(target_os = "windows"))]
+    build
+        .flag("-std=c++11")
+        .flag("-ffunction-sections")
+        .flag("-fdata-sections");
 
     if target.contains("-darwin") {
         build.cpp_set_stdlib("c++");
