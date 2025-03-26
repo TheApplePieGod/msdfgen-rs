@@ -111,7 +111,40 @@ fn generate_bindings<P: AsRef<Path>>(
         .generate()
         .expect("Generated bindings.");
 
-    bindings.write_to_file(out_file).expect("Written bindings.");
+    let mut bindings_text = Vec::new();
+    bindings.write(Box::new(&mut bindings_text)).unwrap();
+
+    #[cfg(target_os = "windows")]
+    {
+        // Workaround wrong Bindgen name mangling on Windows: https://github.com/rust-lang/rust-bindgen/issues/1725
+        let mut index = 0;
+        const PREFIX: &[u8; 4] = b"??_D";
+        const SUFFIX: &[u8; 3] = b"XXZ";
+        while let Some(offset) = bindings_text[index..]
+            .windows(PREFIX.len())
+            .position(|window| window == PREFIX)
+        {
+            index += offset;
+            if let Some(offset_end) = bindings_text[index..]
+                .windows(SUFFIX.len())
+                .position(|window| window == SUFFIX)
+            {
+                let correct_mangled_part =
+                    std::str::from_utf8(&bindings_text[index + PREFIX.len()..index + offset_end])
+                        .unwrap();
+                let replacement = format!("??1{correct_mangled_part}@XZ");
+                let replacment_len = correct_mangled_part.len() + 3;
+                bindings_text.splice(
+                    index..index + offset_end + SUFFIX.len(),
+                    replacement.bytes(),
+                );
+                index += replacment_len;
+            }
+            index += PREFIX.len();
+        }
+    }
+
+    std::fs::write(out_file, bindings_text).expect("Written bindings.");
 }
 
 #[cfg(feature = "update-bindings")]
