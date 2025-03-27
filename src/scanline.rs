@@ -18,8 +18,14 @@ impl Default for FillRule {
 }
 
 impl FillRule {
-    pub(crate) fn into_raw(self) -> std::ffi::c_int {
-        self as _
+    #[cfg(target_os = "windows")]
+    pub(crate) fn into_raw(self) -> i32 {
+        self as i32
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub(crate) fn into_raw(self) -> u32 {
+        self as u32
     }
 
     /*pub(crate) fn from_raw(raw: u32) -> Self {
