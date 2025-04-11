@@ -31,7 +31,7 @@ version = "1"
 features = ["extern_crate_alloc"]
 
 [dependencies.ttf-parser]
-version = "0.19"
+version = "0.21.1"
 optional = true
 
 [dependencies.typeface]
@@ -55,7 +55,7 @@ optional = true
 version = "2"
 
 [dev-dependencies.ttf-parser]
-version = "0.19"
+version = "0.21.1"
 
 [dev-dependencies.notosans]
 version = "0.1"
